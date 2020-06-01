@@ -1,0 +1,123 @@
+#!/bin/bash
+#
+# Piece-of-Cake Modem debug tooling v1.0
+# Robert J. Heerekop IOTC360 May 2020
+#
+# This tool-kit enables you easily to create a LTE-M Internet Of Things Proof-Of-Concept
+# with a Raspberry PI and a SIMCom7070E modem. 
+#
+# PREREQUISITES:
+# - This script is part of a SD image which contains a kernel build with adapted USB modem drivers 
+# - RaspberryPI model Zero, ZeroW, 3B+ or 4) 
+# - SIM7070E firmware 3B05 with USB VID:PID "1e0e:9206 Qualcomm" (Note: check with lsusb) 
+# - USB of SIM7070E (mounted on SIMCom EVB daughter board) connected to RaspberryPI
+# - RaspberryPI pin GPIO21(PIN#40) connected to SIMCom EVB V1.02 pin(A)PWRKEY
+# - RaspberryPI GND  (e.g. PIN#39) connected to SIMCom EVB V1.02 pin(C)GND
+# - SIM7070E Piece-oF-Cake modem drivers implemented in kernel (part of this compiled Piece-of-Cake SD-image)
+# - Python script being used by this shell script to toggle the modem PWRKEY: /home/pi/MODEM_ON_pulse.py
+#
+#
+# USAGE:
+#
+# 'modem start'		> Read availability on USB of modem and if not detected then
+#			  generate MODEM-ON pulse to turn modem on.
+#
+# 'modem stop'		> Read availability on USB of modem and if detected then
+#			  generate MODEM-ON pulse to turn modem off.
+#
+# 'modem restart'	> Same as 'modem start' but also set-up ppp connection and
+#			  set default gateway to ppp0 WWAN-interface.
+#
+# 'modem at'		> Kill ppp deamons(if present) and start minicom
+#			  (and start modem if required) to enable the user to
+#			  manually enter AT-commands for debugging.
+#
+# 'modem toggle'	> generate MODEM-ON pulse to turn modem on/off
+#
+#
+# 'modem --help'	> Shows this text.
+#
+#
+#
+MODEMSEARCH="Qualcomm"
+
+case "$1" in
+  start)
+	MODEMNAME=$(lsusb | grep "1e0e:9206" | awk '{print $7}' )
+	if [ "$MODEMNAME" == "$MODEMSEARCH" ] ; then
+	        echo "modem detected, no MODEM_ON pulse needed"
+	else
+	        echo "modem not detected, generate MODEM_ON pulse to turn modem ON"
+		sudo -H -u root python /home/pi/MODEM_ON_pulse.py
+		sleep 7
+		echo "fyi:"
+		sudo -H -u root ls /dev/ttyUSB*
+	fi
+  ;;
+
+  stop)
+	MODEMNAME=$(lsusb | grep "1e0e:9206" | awk '{print $7}' )
+	if [ "$MODEMNAME" == "$MODEMSEARCH" ] ; then
+	        echo "modem detected, generate MODEM_ON pulse to turn modem OFF"
+		sudo -H -u root python /home/pi/MODEM_ON_pulse.py
+		sleep 5
+		echo "fyi:"
+		sudo -H -u root ls /dev/ttyUSB*
+	else
+	        echo "modem not detected, no MODEM_ON pulse needed"
+	fi
+  ;;
+
+  restart)
+	MODEMNAME=$(lsusb | grep "1e0e:9206" | awk '{print $7}' )
+	if [ "$MODEMNAME" == "$MODEMSEARCH" ] ; then
+	        echo "modem detected, no MODEM_ON pulse needed"
+	else
+	        echo "modem not detected, generate MODEM_ON pulse to turn modem ON"
+		sudo -H -u root python /home/pi/MODEM_ON_pulse.py
+		sleep 5
+	fi
+	echo "Trying to setup ppp"
+	sleep 30
+	sudo -H -u root bash -c 'sudo pppd &'
+	sudo -H -u root bash -c 'echo "sudo pppd &" > /dev/kmsg'
+	sleep 5
+	IP_ADDR=$(ifconfig ppp0 | grep "destination " | awk '{print $6}')
+	sudo -H -u root bash -c 'echo $IP_ADDR > /dev/kmsg'
+	sudo route add default gw $IP_ADDR
+	sudo -H -u root bash -c 'echo "setting ppp0 as default gateway" > /dev/kmsg'
+	echo "fyi:"
+	sudo -H -u root bash -c 'route -n'
+  ;;
+
+  at)
+	sudo killall pppd
+	sleep 3
+	MODEMNAME=$(lsusb | grep "1e0e:9206" | awk '{print $7}' )
+	if [ "$MODEMNAME" == "$MODEMSEARCH" ] ; then
+	        echo "modem detected, no MODEM_ON pulse needed"
+	else
+	        echo "modem not detected, generate MODEM_ON pulse to turn modem ON"
+		sudo -H -u root python /home/pi/MODEM_ON_pulse.py
+		sleep 7
+	fi
+	sudo minicom -b 115200 -D /dev/ttyUSB2
+  ;;
+
+  toggle)
+	echo "generate MODEM_ON pulse to turn modem ON or OFF"
+	sudo -H -u root python /home/pi/MODEM_ON_pulse.py
+  ;;
+
+  help)
+	sed '/help/q' "$0"
+  ;;
+
+  --help)
+	sed '/help/q' "$0"
+  ;;
+
+  h)
+	sed '/help/q' "$0"
+  ;;
+esac
