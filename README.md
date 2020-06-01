@@ -1,5 +1,5 @@
-Piece-of-Cake LTE-M SIM7070E RaspberryPI Modem debug tooling v1.0
------------------------------------------------------------------
+Piece-of-Cake LTE-CatM1 SIM7070E RaspberryPI Modem debug tooling v1.0
+---------------------------------------------------------------------
 
 About:
 ------
