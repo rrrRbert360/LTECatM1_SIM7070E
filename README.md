@@ -6,6 +6,7 @@ About:
 This tool-kit enables you easily to create a LTE-M Internet Of Things Proof-Of-Concept with a Raspberry PI and a SIMCom SIM7070E  which is based on the multi-band multi-mode modem Qualcomm9205.
 You can use the preconfigured SD-Card image to test LTE-M connectivity or simply use this SD-image to easilyy add LTE-M connectivity to your own proof of concepts.
 A short explanation is shown on: https://youtu.be/YQDOI8ArKjU
+
 More experienced users can use the provided patch-file to create their own kernel.
 
 Obtain required hardware to get this working:
